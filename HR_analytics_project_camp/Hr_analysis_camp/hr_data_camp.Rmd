@@ -1,0 +1,42 @@
+---
+title: "hr_data_analysis_camp"
+author: "Mohammed Alhaqbani"
+date: "2023-08-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#About
+
+## What do we want to achive form this case study analysis:
+
+
+
+#Packges used
+##install requierd packges
+```{r}
+install.packages("readr")
+install.packages("tidyverse")
+install.packages("ggplot2")
+```
+##Loading requierd pacjges
+
+```{r}
+library(tidyverse)
+library(readr)
+library(ggplot2)
+```
+
+
+##Loking at the recrutment data
+```{r}
+recruiment <- read_csv("recruitment_data.csv")
+head(recruiment)
+glimpse(recruiment)
+```
+
+
+

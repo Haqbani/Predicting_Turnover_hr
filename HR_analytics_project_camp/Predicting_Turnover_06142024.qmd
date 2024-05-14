@@ -1,0 +1,502 @@
+---
+title: "Predicting Turnover - HR"
+author: "Mohammed Al Haqbani"
+date: "5/14/2024"
+output: 
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: cosmo
+    number_sections: true
+code-fold: false
+code-tools: true
+code-line-numbers: true
+editor: "visual"
+---
+
+```{=html}
+<style>
+  h1.title {
+    font-size: 50px; /* Increase the font size */
+  }
+  
+  body {
+    font-family: 'Arial', sans-serif; /* Use a modern, easy-to-read font */
+    line-height: 1.6; /* Increase line spacing for better readability */
+    font-size: 16px; /* Adjust font size for comfort */
+  }
+  
+  pre {
+    background-color: #FBF5E6; /* Light background for code blocks */
+    border: 1px solid #ccc; /* Border around code blocks */
+    padding: 15px; /* Padding inside code blocks */
+    overflow-x: auto; /* Enable horizontal scrolling for long lines */
+  }
+  
+  h2, h3, h4 {
+    color: #2c3e50; /* Dark grey color for headers */
+    margin-top: 20px; /* Space above headers */
+  }
+  
+  h2 {
+    border-bottom: 2px solid #efefef; /* Light line under h2 for distinction */
+    padding-bottom: 5px; /* Space below the line */
+  }
+  
+  table {
+    width: 100%; /* Full width tables */
+    border-collapse: collapse; /* Ensures borders between cells are merged */
+  }
+  
+  th, td {
+    border: 1px solid #ddd; /* Light grey border for cells */
+    padding: 8px; /* Padding inside cells */
+  }
+  
+  img {
+    max-width: 100%; /* Ensures images are not larger than their container */
+    height: auto; /* Keeps the aspect ratio of images */
+    display: block; /* Prevents images from having extra space below them */
+    margin: 0 auto; /* Centers images horizontally */
+  }
+  
+footer {
+  text-align: center;
+  padding: 20px 0;
+  background-color: #f8f8f8;
+  color: #333;
+  position: fixed;  /* This will keep it at the bottom of the viewport */
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  font-size: 0.8em;
+}
+  
+</style>
+```
+
+------------------------------------------------------------------------
+
+![](images/2024-05-14_18-22-51.png){fig-align="center"}
+
+# Introduction
+
+In today's competitive business environment, understanding employee turnover is crucial for organizational success. Turnover refers to the rate at which employees leave a company and are replaced by new employees. High turnover rates can lead to significant costs for a company, including the expenses associated with recruiting, hiring, and training new employees, as well as the loss of productivity and institutional knowledge. Therefore, it is essential for human resources departments to monitor and analyze turnover rates to devise effective retention strategies.
+
+This analysis aims to explore the patterns of employee turnover within a hypothetical company, leveraging historical data to identify key factors that contribute to employee departure. By utilizing advanced statistical methods and predictive modeling, this study provides insights that can help the organization enhance its employee retention strategies and improve overall workforce management.
+
+# Objective
+
+This analysis is structured to achieve several key objectives that are critical for enhancing employee retention strategies. These objectives are divided into two main categories:
+
+::: {style="display: flex; justify-content: space-between;"}
+::: {style="width: 50%;"}
+### Predictive Insights
+
+-   **Understand Turnover Trends:** Analyze historical data to discern the trends of employee turnover over different periods.
+-   **Develop Predictive Models:** Construct models to predict potential turnover, enabling proactive strategies to mitigate it.
+:::
+
+::: {style="width: 50%;"}
+### Strategic Actions
+
+-   **Identify Key Factors:** Determine factors such as employee level and location that significantly impact turnover rates.
+-   **Inform Strategic Decisions:** Deliver actionable insights to assist HR and management in making informed policy and practice decisions.
+-   **Enhance Employee Retention:** Propose targeted strategies to improve employee retention and reduce turnover costs.
+:::
+:::
+
+By systematically addressing these objectives, the analysis aims to empower the organization with the necessary insights and tools to foster a stable and engaged workforce, ultimately enhancing overall organizational performance.
+
+## libraries
+
+```{r message=FALSE, warning=FALSE}
+library(caret)
+library(tidyverse)
+library(lubridate)
+library(readxl)
+library(lubridate)
+library(scales)
+library(Information)
+library(car)
+library(tidypredict)
+library(gt)
+```
+
+## The dataset
+
+```{r message=FALSE, warning=FALSE}
+org_tbl <- read_csv ("/Users/haqbani/Library/CloudStorage/Dropbox/10 _Miscellaneous/2 _perosnal_projects/R/predecting_employee_churn_in_r_05122024/employee_data (1)/org.csv")
+rating_tbl <- read_csv("/Users/haqbani/Library/CloudStorage/Dropbox/10 _Miscellaneous/2 _perosnal_projects/R/predecting_employee_churn_in_r_05122024/employee_data (1)/rating.csv")
+survey_tbl <- read_csv("/Users/haqbani/Library/CloudStorage/Dropbox/10 _Miscellaneous/2 _perosnal_projects/R/predecting_employee_churn_in_r_05122024/employee_data (1)/survey.csv")
+org_final_tbl <- read.csv("/Users/haqbani/Library/CloudStorage/Dropbox/10 _Miscellaneous/2 _perosnal_projects/R/predecting_employee_churn_in_r_05122024/employee_data (1)/org_final.csv")
+org_fina_2 <- read_csv("/Users/haqbani/Library/CloudStorage/Dropbox/10 _Miscellaneous/2 _perosnal_projects/R/predecting_employee_churn_in_r_05122024/employee_data (1)/org_final.csv")
+
+```
+
+# Explore the data
+
+```{r message=FALSE, warning=FALSE}
+org_tbl %>% head() %>% gt()
+rating_tbl %>% head() %>% gt()
+survey_tbl %>% head() %>% gt()
+```
+
+# Calculate Turnover
+
+in order to calculate the turnover we need to create a new column called turnover and assign 0 to active employees and 1 to inactive employee
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+org_tbl <- org_tbl %>%
+    mutate(turnover = ifelse(status == "Active",0, 1)) %>%
+    glimpse()
+```
+
+### What proportion of employees have left?
+
+As per the below results, we can see that 18% of the employees have left the company.
+
+::: callout-important
+## Attention
+
+The 18% is referring to the entire data without considering the dates. Hence, in other words, 18% employee have left for the whole period of operating the company.
+:::
+
+```{r message=FALSE, warning=FALSE}
+
+org_tbl %>%
+    summarize(turnover_rate = percent(mean(turnover, na.rm = TRUE))) %>% gt()
+```
+
+### What levels have high turnover rate?
+
+```{r message=FALSE, warning=FALSE}
+plot1 <- org_tbl %>%
+    group_by(level) %>%
+    summarize(turnover_rate = mean(turnover)) %>%
+    ggplot(aes(x = level, y = turnover_rate)) +
+    geom_col(fill = "#091E57")+
+    labs(title = "Turnover Rate by Level",
+         x = "Level",
+         y = "Turnover Rate")
+```
+
+### Is turnover rate different across locations?
+
+```{r message=FALSE, warning=FALSE}
+plot2 <- org_tbl %>%
+    group_by(location) %>%
+    summarize(turnover_rate = mean(turnover, na.rm = TRUE)) %>% 
+    ggplot(aes(x = location, y = turnover_rate)) +
+    geom_col(fill = "#091E57")
+```
+
+::: {.column width="85%"}
+```{r}
+print(plot1)
+print(plot2)
+```
+:::
+
+### Counting the number of employees in each level
+
+```{r message=FALSE, warning=FALSE}
+org_tbl %>%
+    group_by(level) %>%
+    count()
+```
+
+### Filtering & count 
+
+the dataset to select only Analyst and Specialist
+
+```{r message=FALSE, warning=FALSE}
+org_tbl %>%
+    filter(level == "Analyst" | level == "Specialist")
+
+org_tbl %>%
+    filter(level == "Analyst" | level == "Specialist") %>%
+    group_by(level) %>%
+    count()
+
+```
+
+# Joining the tables 
+
+Joining the rating tbl with org tbl using left join by the emp_id
+
+```{r message=FALSE, warning=FALSE,results='hide'}
+
+org_tbl %>% glimpse()
+rating_tbl %>% glimpse()
+
+
+joined_tbl <- org_tbl %>%
+    left_join(rating_tbl, by = "emp_id") %>% glimpse()
+
+
+joined_tbl %>%
+    group_by(rating) %>% 
+    summarize(turnover_rate = mean(turnover, na.rm = TRUE)) %>% glimpse()
+
+```
+
+Joining the survey_tbl with joined_tbl using left_join by the mgr_id
+
+```{r message=FALSE, warning=FALSE,results='hide'}
+
+joined_tbl <- joined_tbl %>% 
+    left_join(survey_tbl, by = "mgr_id") %>%
+    group_by(status)
+
+joined_tbl %>%
+select(status, mgr_effectiveness) %>%
+    ggplot(aes(x = status, y = mgr_effectiveness)) +
+    geom_boxplot(fill = "#091E57")
+
+```
+
+### Distance from home to work
+
+```{r message=FALSE, warning=FALSE,results='hide'}
+org_final_tbl %>%
+    select(status, distance_from_home) %>%
+    ggplot(aes(x = status, y = distance_from_home)) +
+    geom_boxplot(fill = "#091E57")
+```
+
+### Age difference between employees and managers
+
+```{r message=FALSE, warning=FALSE,results='hide'}
+org_final_tbl %>%
+    select(emp_age, mgr_age, status) %>%
+    mutate(age_diff = mgr_age - emp_age) %>%
+    ggplot(aes(x = status, y = age_diff)) +
+    geom_boxplot(fill = "#091E57")
+
+```
+
+# Calcute the job hob index for each employee
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+org_final_tbl %>%
+    select(status, total_experience, no_previous_companies_worked) %>%
+    mutate(job_hub_index = total_experience/no_previous_companies_worked) %>%
+    ggplot(aes(x = status, y = job_hub_index)) +
+    geom_boxplot(fill = "#091E57")
+
+```
+
+```{r message=FALSE, warning=FALSE, results='hide', echo=FALSE}
+
+tenure_tbl <- org_final_tbl %>%
+    select(status, date_of_joining, last_working_date, cutoff_date) %>%
+    mutate(date_of_joining = as.Date(date_of_joining, format = "%d/%m/%Y"),
+           last_working_date = as.Date(last_working_date, format = "%d/%m/%Y"),
+           cutoff_date = as.Date(cutoff_date, format = "%d/%m/%Y"),
+           tenure = ifelse(
+               status == "Active",
+               time_length(interval(date_of_joining, cutoff_date), "years"),
+               time_length(interval(date_of_joining, last_working_date), "years"))) %>%
+    ggplot(aes(x = status, y = tenure)) +
+    geom_boxplot(fill = "#091E57")
+```
+
+# Compensation distribution
+
+```{r}
+org_final_tbl %>%
+    select(compensation, status, date_of_joining, cutoff_date, last_working_date) %>%
+    mutate(date_of_joining = as.Date(date_of_joining, format = "%d/%m/%Y"),
+           cutoff_date = as.Date(cutoff_date, format = "%d/%m/%Y"),
+           last_working_date = as.Date(last_working_date, format = "%d/%m/%Y"),
+           tenure = ifelse(
+               status == "Active",
+               time_length(interval(date_of_joining, cutoff_date), "years"),
+               time_length(interval(date_of_joining, last_working_date), "years"))) %>%
+    glimpse() %>%
+    ggplot(aes(x = compensation))+
+    geom_histogram(fill = "#091E57", bins = 30)+
+    scale_x_continuous(labels = scales::dollar_format())+
+    labs(title = "Compensation Distribution",
+         x = "Compensation",
+         y = "Frequency")
+
+```
+
+## Explore the distrpution of compensation by level
+
+```{r message=FALSE, warning=FALSE}
+
+org_final_tbl %>%
+    select(compensation, level) %>%
+    ggplot(aes(x = compensation))+
+    geom_histogram(fill = "#091E57", bins = 30)+
+    scale_x_continuous(labels = scales::dollar_format())+
+    labs(title = "Compensation Distribution by Level",
+         x = "Compensation",
+         y = "Frequency")+
+    facet_wrap(~level)
+```
+
+## Explore the distribution of compensation by states
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+
+org_final_tbl %>%
+    select(compensation, status) %>%
+    ggplot(aes(x= status, y = compensation, fill = status))+
+    geom_boxplot()
+
+```
+
+## Calculate the compo-ratio
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+org_final_tbl %>%
+    select(compensation, level, status) %>%
+    group_by(level) %>%
+    summarize(median_compensation = median(compensation))
+
+```
+
+## Calculate the compo-ratio for each employee
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+compa_ratio <- org_final_tbl %>%
+    select(compensation, level, status) %>%
+    mutate(comp_ratio = compensation/median(compensation))
+
+compa_ratio %>%
+    mutate(compa_level = ifelse(comp_ratio > 1, "Above", "Below")) %>%
+    ggplot(aes(x = status, fill = compa_level))+
+    geom_bar(position = "fill")
+```
+
+# Informaion power
+
+measuring and ranking the variables on the basis of the predictive power of each variable i will have to convert the the dates to Date i have to calculate the tenure of each employee again since did not saved it 😁
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+org_final_tbl <- org_final_tbl %>%
+    mutate(date_of_joining = as.Date(date_of_joining, format("%d/%m/%Y"))) %>%
+    mutate(cutoff_date = as.Date(cutoff_date, format("%d/%m/%Y"))) %>%
+    mutate(last_working_date = as.Date(last_working_date, format("%d/%m/%Y"))) %>%
+    mutate(tenure = ifelse(status == "Active",
+                           time_length(interval(date_of_joining, cutoff_date), "years"),
+                           time_length(interval(date_of_joining, last_working_date), "years"))) %>%
+    glimpse()
+```
+
+```{r message=FALSE, warning=FALSE}
+iv <- create_infotables(data = org_final_tbl, y = "turnover")
+iv$Summary %>% gt()
+
+```
+
+## Spliting the data 
+
+into training and testing with caret into 70% / 30%
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+set.seed(567)
+index_train <- createDataPartition(org_final_tbl$turnover, p=0.7, list = FALSE)
+
+train_set <- org_final_tbl[index_train,]
+test_set <- org_final_tbl[-index_train,]
+```
+
+## Data Validation
+
+Make sure that the data you are training your model is representative
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+
+train_set %>%
+    count(status) %>%
+    mutate(prop = n/sum(n)*100)
+test_set %>%
+    count(status) %>%
+    mutate(prop = n/sum(n)*100)
+```
+
+# Building the model
+
+Logistic regression
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+train_set_multi <- train_set %>%
+    select(-c(emp_id, mgr_id, date_of_joining,
+              last_working_date, cutoff_date, status,
+              compensation, department, mgr_age, emp_age))
+
+```
+
+Miltiy verible logistic regression
+
+```{r message=FALSE, warning=FALSE}
+
+multi_log <- glm(turnover ~ ., data = train_set_multi, family = "binomial")
+summary(multi_log)
+
+
+```
+
+## Multicollinearity
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+vif(multi_log)
+
+model_1 <- glm(turnover ~ ., family = "binomial",
+              data = train_set_multi)
+vif(model_1)
+
+highest <- "level"
+model_2 <- update(model_1, . ~ . - level)
+vif(model_2)
+```
+
+# Predicting employee turnover
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+final_log <- glm(turnover ~ ., family = "binomial",
+                 data = train_set_multi)
+
+prediction_test <- predict(final_log, type = "response")
+
+hist(prediction_test)
+
+```
+
+```{r message=FALSE, warning=FALSE, results='hide'}
+enp_risk <- org_final_tbl %>%
+    filter(status == "Active") %>%
+    tidypredict_to_column(final_log)
+```
+
+## The top 10 employees at risk of leaving
+
+```{r}
+enp_risk %>%
+    select(emp_id, fit) %>%
+    slice_max(fit, n = 10) %>% gt()
+```
+
+## Classification of the employees at risk of leaving
+
+```{r}
+emp_risk_bukets. <- enp_risk %>%
+    mutate(risk_bucket = cut(fit, breaks = c(0,0.5,0.6,0.8,1),
+           labels = c("no_risk", "low_risk", "medium_risk", "high_risk"))) %>%
+    glimpse() %>% gt()
+```
+
+<footer>
+
+<p>Created by: Mohammed Al Haqbani</p>
+
+<p>Data Source: Synthetic Generated Data</p> <p>LinkedIn: <a href="https://www.linkedin.com/in/alhagbani/" target="_blank">https://www.linkedin.com/in/alhagbani/</a></p>
+
+</footer>
